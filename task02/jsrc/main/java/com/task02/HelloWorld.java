@@ -17,16 +17,9 @@ import java.util.function.Function;
     lambdaName = "hello_world",
 	roleName = "hello_world-role",
 	isPublishVersion = true,
-	aliasName = /*"${lambdas_alias_name}"*/"learn",
+	aliasName = "${lambdas_alias_name}",
 	logsExpiration = RetentionSetting.SYNDICATE_ALIASES_SPECIFIED
 )
-/*@LambdaLayer(
-		layerName = "sdk-layer",
-		libraries = {"lib/gson-2.11.0.jar"},
-		runtime = DeploymentRuntime.JAVA17,
-		architectures = {Architecture.ARM64},
-		artifactExtension = ArtifactExtension.ZIP
-)*/
 @LambdaUrlConfig(
 		authType = AuthType.NONE,
 		invokeMode = InvokeMode.BUFFERED
@@ -61,7 +54,7 @@ public class HelloWorld implements RequestHandler<APIGatewayV2HTTPEvent, Map<Str
 	private Map<String, Object> buildResponse(int statusCode, Object message) {
 		Map<String, Object> resultMap = new HashMap<>();
 		resultMap.put("statusCode", statusCode);
-		resultMap.put("message", message);
+		resultMap.put("body", "{\"statusCode\":" + statusCode + ", \"message\": \"" + message + "\"}");
 		return resultMap;
 	}
 
