@@ -36,35 +36,31 @@ import java.util.function.Function;
 )
 public class HelloWorld implements RequestHandler<APIGatewayV2HTTPEvent, Map<String, Object>> {
 
-	private static final int SC_OK = 200;
-	private static final int SC_NOT_FOUND = 400;
-	private final Map<String, String> responseHeaders = Map.of("Content-Type", "application/json");
-	private final Map<String, Function<APIGatewayV2HTTPEvent, Map<String, Object>>> routeHandlers = Map.of(
-			"GET#/hello", this::handleGetHello
-	);
-
 	@Override
 	public Map<String, Object> handleRequest(APIGatewayV2HTTPEvent requestEvent, Context context) {
-		String key = getMethod(requestEvent) + "#" + getPath(requestEvent);
-		return routeHandlers.getOrDefault(key, this::notFoundResponse).apply(requestEvent);
-	}
+		String path = getPath(requestEvent);
+		String method = getMethod(requestEvent);
 
-	private Map<String, Object> handleGetHello(APIGatewayV2HTTPEvent requestEvent) {
-		return buildResponse(SC_OK, "Hello from Lambda");
-	}
+		int statusCode;
+		String responseBody;
 
-	private Map<String, Object> notFoundResponse(APIGatewayV2HTTPEvent requestEvent) {
-		return buildResponse(SC_NOT_FOUND,
-				"Bad request syntax or unsupported method. Request path: %s. HTTP method: %s".formatted(
-				getMethod(requestEvent),
-				getPath(requestEvent)
-		));
+		if ("/hello".equals(path) && "GET".equalsIgnoreCase(method)) {
+			statusCode = 200;
+			responseBody = "{\"statusCode\": 200, \"message\": \"Hello from Lambda\"}";
+		} else {
+			statusCode = 400;
+			responseBody = String.format(
+					"{\"statusCode\": 400, \"message\": \"Bad request syntax or unsupported method. Request path: %s. HTTP method: %s\"}",
+					path, method
+			);
+		}
+		return buildResponse(statusCode, responseBody);
 	}
 
 	private Map<String, Object> buildResponse(int statusCode, Object message) {
 		Map<String, Object> resultMap = new HashMap<>();
 		resultMap.put("statusCode", statusCode);
-		resultMap.put("body", "{\"statusCode\":" + statusCode + ", \"message\": \"" + message + "\"}");
+		resultMap.put("body", message);
 		return resultMap;
 	}
 
