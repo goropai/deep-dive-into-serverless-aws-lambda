@@ -60,7 +60,7 @@
         "enable_cors": true,
         "GET": {
           "integration_request_body_template": {},
-          "authorization_type": "AWS_IAM",
+          "authorization_type": "NONE",
           "integration_type": "lambda",
           "method_request_parameters": {},
           "cache_configuration": {
