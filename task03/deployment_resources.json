@@ -75,12 +75,7 @@
           "default_error_pattern": true,
           "integration_passthrough_behavior": "WHEN_NO_TEMPLATES",
           "lambda_name": "hello_world",
-          "responses": [
-            {
-              "status_code": 200,
-              "message": "Hello from Lambda"
-            }
-          ]
+          "lambda_alias": "${lambdas_alias_name}"
         }
       }
     },
