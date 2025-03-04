@@ -37,7 +37,6 @@
   "async_queue": {
     "resource_type": "sqs_queue",
     "fifo_queue": false,
-    "region": "us-east-1",
     "visibility_timeout": 30,
     "delay_seconds": 0,
     "maximum_message_size": 1024,
@@ -59,7 +58,6 @@
   },
   "lambda_topic": {
     "resource_type": "sns_topic",
-    "region": "us-east-1",
     "event_sources": [],
     "tags": {}
   }

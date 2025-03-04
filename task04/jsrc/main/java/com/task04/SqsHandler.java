@@ -6,9 +6,6 @@ import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.syndicate.deployment.annotations.lambda.LambdaHandler;
 import com.syndicate.deployment.model.RetentionSetting;
 
-import java.util.HashMap;
-import java.util.Map;
-
 @LambdaHandler(
     lambdaName = "sqs_handler",
 	roleName = "sqs_handler-role",
@@ -16,18 +13,14 @@ import java.util.Map;
 	aliasName = "${lambdas_alias_name}",
 	logsExpiration = RetentionSetting.SYNDICATE_ALIASES_SPECIFIED
 )
-public class SqsHandler implements RequestHandler<SQSEvent, Map<String, Object>> {
+public class SqsHandler implements RequestHandler<SQSEvent, Void> {
 
-	public Map<String, Object> handleRequest(SQSEvent sqsEvent, Context context) {
+	@Override
+	public Void handleRequest(SQSEvent sqsEvent, Context context) {
 		for (SQSEvent.SQSMessage msg : sqsEvent.getRecords()) {
 			processMessage(msg, context);
 		}
-
-		context.getLogger().log("Hello from lambda");
-		Map<String, Object> resultMap = new HashMap<String, Object>();
-		resultMap.put("statusCode", 200);
-		resultMap.put("message", "Hello from Lambda");
-		return resultMap;
+		return null;
 	}
 
 	private void processMessage(SQSEvent.SQSMessage msg, Context context) {
