@@ -14,7 +14,7 @@ import com.syndicate.deployment.model.RetentionSetting;
 	aliasName = "${lambdas_alias_name}",
 	logsExpiration = RetentionSetting.SYNDICATE_ALIASES_SPECIFIED
 )
-@SqsTriggerEventSource(targetQueue = "async_queue", batchSize = 0)
+@SqsTriggerEventSource(targetQueue = "async_queue", batchSize = 1)
 public class SqsHandler implements RequestHandler<SQSEvent, Void> {
 
 	@Override
