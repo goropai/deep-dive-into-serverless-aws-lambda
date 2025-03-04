@@ -37,10 +37,43 @@
   "task3_api": {
     "resource_type": "api_gateway",
     "deploy_stage": "api",
-    "dependencies": [],
+    "cluster_cache_configuration": {
+      "policy_statement_singleton": true,
+      "cache_enabled": true,
+      "cache_size": 0.5,
+      "cache_ttl_sec": 300,
+      "encrypt_cache_data": true
+    },
+    "cluster_throttling_configuration": {
+      "throttling_enabled": true,
+      "throttling_rate_limit": 10000,
+      "throttling_burst_limit": 5000
+    },
+    "dependencies": [
+      {
+        "resource_name": "hello_world",
+        "resource_type": "lambda"
+      }
+    ],
     "resources": {
       "/hello": {
+        "enable_cors": true,
         "GET": {
+          "integration_request_body_template": {},
+          "authorization_type": "AWS_IAM",
+          "integration_type": "lambda",
+          "method_request_parameters": {},
+          "cache_configuration": {
+            "cache_ttl_sec": 100,
+            "encrypt_cache_data": true
+          },
+          "throttling_configuration": {
+            "throttling_enabled": false,
+            "throttling_rate_limit": 10002,
+            "throttling_burst_limit": 5002
+          },
+          "default_error_pattern": true,
+          "integration_passthrough_behavior": "WHEN_NO_TEMPLATES",
           "lambda_name": "hello_world",
           "responses": [
             {
