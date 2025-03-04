@@ -37,6 +37,7 @@
   "async_queue": {
     "resource_type": "sqs_queue",
     "fifo_queue": false,
+    "region": "us-east-1",
     "visibility_timeout": 30,
     "delay_seconds": 0,
     "maximum_message_size": 1024,
@@ -45,6 +46,21 @@
     "policy": {},
     "redrive_policy": {},
     "content_based_deduplication": false,
+    "tags": {}
+  },
+  "sns_handler-role": {
+    "predefined_policies": [],
+    "principal_service": "lambda",
+    "custom_policies": [
+      "lambda-basic-execution"
+    ],
+    "resource_type": "iam_role",
+    "tags": {}
+  },
+  "lambda_topic": {
+    "resource_type": "sns_topic",
+    "region": "us-east-1",
+    "event_sources": [],
     "tags": {}
   }
 }
