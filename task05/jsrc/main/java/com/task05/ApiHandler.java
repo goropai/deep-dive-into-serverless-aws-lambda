@@ -44,7 +44,7 @@ public class ApiHandler implements RequestHandler<Map<String, Object>, Map<Strin
 		eventItem.put("body", new AttributeValue(request.get("content").toString()));  // make sure 'content' exists in the request
 
 		// put item in DynamoDB table
-		PutItemResult putItemResult = dynamoDB.putItem("Events", eventItem);
+		PutItemResult putItemResult = dynamoDB.putItem("${target_table}", eventItem);
 
 		// prepare response
 		Map<String, Object> response = new HashMap<>();
