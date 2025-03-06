@@ -49,15 +49,24 @@
       "throttling_rate_limit": 10000,
       "throttling_burst_limit": 5000
     },
-    "dependencies": [],
+    "dependencies": [
+      {
+        "resource_name": "api_handler",
+        "resource_type": "lambda"
+      }
+    ],
     "resources": {
       "/events": {
-        "enable_cors": true,
+        "enable_cors": false,
         "POST": {
-          "integration_request_body_template": {},
+          "enable_proxy": true,
           "authorization_type": "NONE",
           "integration_type": "lambda",
+          "api_key_required": false,
           "method_request_parameters": {},
+          "integration_request_body_template": {},
+          "responses": [],
+          "integration_responses": [],
           "cache_configuration": {
             "cache_ttl_sec": 100,
             "encrypt_cache_data": true

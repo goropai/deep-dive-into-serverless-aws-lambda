@@ -53,7 +53,7 @@ public class ApiHandler implements RequestHandler<Map<String, Object>, Map<Strin
 		event.put("id", uuid);
 		event.put("principalId", request.get("principalId"));
 		event.put("createdAt", createdAt);
-		event.put("body", request.get("content")); // here I assume that 'content' is properly parsed JSON object, not a string
+		event.put("body", request.get("content"));
 		response.put("event", event);
 
 		return response;
