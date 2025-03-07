@@ -2,8 +2,7 @@ package com.task05;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.amazonaws.services.dynamodbv2.model.PutItemResult;
+import com.amazonaws.services.dynamodbv2.model.*;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.syndicate.deployment.annotations.lambda.LambdaHandler;
@@ -24,7 +23,7 @@ import java.util.UUID;
 )
 public class ApiHandler implements RequestHandler<Map<String, Object>, Map<String, Object>> {
 
-	private AmazonDynamoDB dynamoDB;
+	private final AmazonDynamoDB dynamoDB;
 
 	public ApiHandler(){
 		// initialize client
@@ -49,13 +48,16 @@ public class ApiHandler implements RequestHandler<Map<String, Object>, Map<Strin
 		context.getLogger().log("Event: " + eventItem);
 
 		// put item in DynamoDB table
-		PutItemResult putItemResult = dynamoDB.putItem("Events", eventItem);
-		context.getLogger().log("Put item result: " + putItemResult);
+		PutItemResult putItemResult = dynamoDB.putItem(new PutItemRequest("Events", eventItem));
+		Map<String, AttributeValue> key = new HashMap<>();
+		key.put("id", new AttributeValue(uuid));
+		GetItemResult result = dynamoDB.getItem(new GetItemRequest("Events", key));
+		context.getLogger().log("Item from database: " + result.getItem());
 
 		// prepare response
 		Map<String, Object> response = new HashMap<>();
 		response.put("statusCode", 201);
-		response.put("event", putItemResult);
+		response.put("event", result.getItem());
 		context.getLogger().log("Response: " + response);
 
 		return response;
