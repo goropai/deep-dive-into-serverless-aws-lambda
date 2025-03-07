@@ -5,6 +5,8 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.model.*;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.syndicate.deployment.annotations.environment.EnvironmentVariable;
 import com.syndicate.deployment.annotations.lambda.LambdaHandler;
 import com.syndicate.deployment.model.RetentionSetting;
@@ -25,6 +27,7 @@ import java.util.UUID;
 @EnvironmentVariable(key = "target_table", value = "${target_table}")
 public class ApiHandler implements RequestHandler<Map<String, Object>, Map<String, Object>> {
 	private final String tableName;
+	private final ObjectMapper objectMapper = new ObjectMapper();
 
 	public ApiHandler() {
 		this.tableName = System.getenv("target_table");
@@ -39,14 +42,21 @@ public class ApiHandler implements RequestHandler<Map<String, Object>, Map<Strin
 		context.getLogger().log("Table name: " + tableName);
 		context.getLogger().log("Received request: " + request);
 
-		// create map to store event attributes for DynamoDB
+		Map<String, Object> bodyMap;
+        try {
+            bodyMap = objectMapper.readValue((String) request.get("body"), HashMap.class);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+
+        // create map to store event attributes for DynamoDB
 		Map<String, AttributeValue> eventItem = new HashMap<>();
 		eventItem.put("id", new AttributeValue(uuid));
-		eventItem.put("principalId", new AttributeValue(request.get("principalId").toString()));
+		eventItem.put("principalId", new AttributeValue(bodyMap.get("principalId").toString()));
 		eventItem.put("createdAt", new AttributeValue(createdAt));
-		eventItem.put("body", new AttributeValue(request.get("content").toString()));
+		eventItem.put("body", new AttributeValue(bodyMap.get("content").toString()));
 
-		context.getLogger().log("Content to be stored: " + request.get("content"));
+		context.getLogger().log("Content to be stored: " + bodyMap.get("content"));
 		context.getLogger().log("Event: " + eventItem);
 
 		// put item in DynamoDB table
