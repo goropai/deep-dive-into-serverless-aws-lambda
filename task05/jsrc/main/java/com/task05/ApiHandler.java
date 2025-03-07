@@ -28,20 +28,15 @@ public class ApiHandler implements RequestHandler<Map<String, Object>, Map<Strin
 
 	public ApiHandler() {
 		this.tableName = System.getenv("target_table");
-		if (this.tableName == null || this.tableName.isEmpty()) {
-			throw new IllegalStateException("TARGET_TABLE environment variable is not set");
-		}
 	}
 
 	@Override
 	public Map<String, Object> handleRequest(Map<String, Object> request, Context context) {
-		context.getLogger().log("Context is: " + context);
-		context.getLogger().log("Table is: ${target_table}");
-
 		AmazonDynamoDB dynamoDB = AmazonDynamoDBClientBuilder.defaultClient();
 		String uuid = UUID.randomUUID().toString();
 		String createdAt = ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT);
 
+		context.getLogger().log("Table name: " + tableName);
 		context.getLogger().log("Received request: " + request);
 
 		// create map to store event attributes for DynamoDB
