@@ -36,25 +36,27 @@ public class ApiHandler implements RequestHandler<Map<String, Object>, Map<Strin
 		String uuid = UUID.randomUUID().toString();
 		String createdAt = ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT);
 
+		context.getLogger().log("Received request: " + request);
+
 		// create map to store event attributes for DynamoDB
 		Map<String, AttributeValue> eventItem = new HashMap<>();
 		eventItem.put("id", new AttributeValue(uuid));
 		eventItem.put("principalId", new AttributeValue(request.get("principalId").toString()));
 		eventItem.put("createdAt", new AttributeValue(createdAt));
-		eventItem.put("body", new AttributeValue(request.get("content").toString()));  // make sure 'content' exists in the request
+		eventItem.put("body", new AttributeValue(request.get("content").toString()));
+
+		context.getLogger().log("Content to be stored: " + request.get("content"));
+		context.getLogger().log("Event: " + eventItem);
 
 		// put item in DynamoDB table
 		PutItemResult putItemResult = dynamoDB.putItem("Events", eventItem);
+		context.getLogger().log("Put item result: " + putItemResult);
 
 		// prepare response
 		Map<String, Object> response = new HashMap<>();
 		response.put("statusCode", 201);
-		Map<String, Object> event = new HashMap<>();
-		event.put("id", uuid);
-		event.put("principalId", request.get("principalId"));
-		event.put("createdAt", createdAt);
-		event.put("body", request.get("content"));
-		response.put("event", event);
+		response.put("event", putItemResult);
+		context.getLogger().log("Response: " + response);
 
 		return response;
 	}
