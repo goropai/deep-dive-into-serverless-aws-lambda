@@ -23,15 +23,10 @@ import java.util.UUID;
 )
 public class ApiHandler implements RequestHandler<Map<String, Object>, Map<String, Object>> {
 
-	private final AmazonDynamoDB dynamoDB;
-
-	public ApiHandler(){
-		// initialize client
-		this.dynamoDB = AmazonDynamoDBClientBuilder.defaultClient();
-	}
-
 	@Override
 	public Map<String, Object> handleRequest(Map<String, Object> request, Context context) {
+		AmazonDynamoDB dynamoDB = AmazonDynamoDBClientBuilder.defaultClient();
+		context.getLogger().log("DynamoDB client created: " + dynamoDB);
 		String uuid = UUID.randomUUID().toString();
 		String createdAt = ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT);
 
