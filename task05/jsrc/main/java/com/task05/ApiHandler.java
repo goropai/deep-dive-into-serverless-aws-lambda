@@ -25,9 +25,11 @@ public class ApiHandler implements RequestHandler<Map<String, Object>, Map<Strin
 
 	@Override
 	public Map<String, Object> handleRequest(Map<String, Object> request, Context context) {
-		String tableName = "cmtr-eef7f927-Events";
+		String tableName = context.getClientContext().getEnvironment().get("target_table");
+		context.getLogger().log("Table is: " + tableName);
+		context.getLogger().log("Table is: ${target_table}");
+
 		AmazonDynamoDB dynamoDB = AmazonDynamoDBClientBuilder.defaultClient();
-		context.getLogger().log("DynamoDB client created: " + dynamoDB);
 		String uuid = UUID.randomUUID().toString();
 		String createdAt = ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT);
 
