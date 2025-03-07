@@ -75,5 +75,21 @@
     "global_indexes": [],
     "autoscaling": [],
     "tags": {}
+  },
+  "api_handler": {
+    "resource_type": "lambda",
+    "runtime": "java11",
+    "handler": "com.task05.ApiHandler::handleRequest",
+    "role_arn": {
+      "Ref": "api_handler-role"
+    },
+    "memory_size": 512,
+    "timeout": 300,
+    "environment": {
+      "variables": {
+        "target_table": "${target_table}"
+      }
+    },
+    "tags": {}
   }
 }

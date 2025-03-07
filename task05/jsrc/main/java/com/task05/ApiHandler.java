@@ -22,11 +22,18 @@ import java.util.UUID;
 	logsExpiration = RetentionSetting.SYNDICATE_ALIASES_SPECIFIED
 )
 public class ApiHandler implements RequestHandler<Map<String, Object>, Map<String, Object>> {
+	private final String tableName;
+
+	public ApiHandler() {
+		this.tableName = System.getenv("target_table");
+		if (this.tableName == null || this.tableName.isEmpty()) {
+			throw new IllegalStateException("TARGET_TABLE environment variable is not set");
+		}
+	}
 
 	@Override
 	public Map<String, Object> handleRequest(Map<String, Object> request, Context context) {
-		String tableName = context.getClientContext().getEnvironment().get("target_table");
-		context.getLogger().log("Table is: " + tableName);
+		context.getLogger().log("Context is: " + context);
 		context.getLogger().log("Table is: ${target_table}");
 
 		AmazonDynamoDB dynamoDB = AmazonDynamoDBClientBuilder.defaultClient();
