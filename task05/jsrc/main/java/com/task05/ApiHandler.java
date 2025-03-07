@@ -1,18 +1,21 @@
 package com.task05;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.model.*;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPEvent;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPResponse;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.syndicate.deployment.annotations.environment.EnvironmentVariable;
 import com.syndicate.deployment.annotations.lambda.LambdaHandler;
+import com.syndicate.deployment.annotations.lambda.LambdaUrlConfig;
 import com.syndicate.deployment.model.RetentionSetting;
+import com.syndicate.deployment.model.lambda.url.AuthType;
+import com.syndicate.deployment.model.lambda.url.InvokeMode;
 
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -24,54 +27,68 @@ import java.util.UUID;
 	aliasName = "${lambdas_alias_name}",
 	logsExpiration = RetentionSetting.SYNDICATE_ALIASES_SPECIFIED
 )
-@EnvironmentVariable(key = "target_table", value = "${target_table}")
-public class ApiHandler implements RequestHandler<Map<String, Object>, Map<String, Object>> {
-	private final String tableName;
+@EnvironmentVariable(
+		key = "target_table", value = "${target_table}"
+)
+@LambdaUrlConfig(
+		authType = AuthType.NONE,
+		invokeMode = InvokeMode.BUFFERED
+)
+public class ApiHandler implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2HTTPResponse> {
 	private final ObjectMapper objectMapper = new ObjectMapper();
 
-	public ApiHandler() {
-		this.tableName = System.getenv("target_table");
+	@Override
+	public APIGatewayV2HTTPResponse handleRequest(APIGatewayV2HTTPEvent event, Context context) {
+		try {
+			context.getLogger().log("Received event: " + objectMapper.writeValueAsString(event));
+
+			String body = event.getBody();
+			if (body == null || body.isEmpty()) {
+				throw new RuntimeException("Empty request body");
+			}
+
+			JsonNode requestBody = objectMapper.readTree(body);
+			JsonNode principalIdNode = requestBody.get("principalId");
+			int principalId = principalIdNode.asInt();
+
+			JsonNode content = requestBody.get("content");
+
+			String eventId = UUID.randomUUID().toString();
+			String createdAt = Instant.now().toString();
+
+			Map<String, AttributeValue> bodyMap = new HashMap<>();
+			content.fields().forEachRemaining(entry ->
+					bodyMap.put(entry.getKey(), new AttributeValue(entry.getValue().asText()))
+			);
+
+			Map<String, AttributeValue> item = new HashMap<>();
+			item.put("id", new AttributeValue(eventId));
+			item.put("principalId", new AttributeValue().withN(String.valueOf(principalId)));
+			item.put("createdAt", new AttributeValue(createdAt));
+			item.put("body", new AttributeValue().withM(bodyMap));
+
+			saveToDynamoDb(item);
+
+			Map<String, Object> responseBody = new HashMap<>();
+			responseBody.put("id", eventId);
+			responseBody.put("principalId", principalId);
+			responseBody.put("createdAt", createdAt);
+			responseBody.put("body", objectMapper.treeToValue(content, Map.class));
+
+			return APIGatewayV2HTTPResponse.builder()
+					.withStatusCode(201)
+					.withBody(objectMapper.writeValueAsString(Map.of("statusCode", 201, "event", responseBody)))
+					.build();
+		} catch (Exception e) {
+			context.getLogger().log("Error processing request: " + e.getMessage());
+			return APIGatewayV2HTTPResponse.builder()
+					.withStatusCode(500)
+					.withBody("{\"statusCode\":500,\"message\":\"Fatal Error\"}")
+					.build();
+		}
 	}
 
-	@Override
-	public Map<String, Object> handleRequest(Map<String, Object> request, Context context) {
-		AmazonDynamoDB dynamoDB = AmazonDynamoDBClientBuilder.defaultClient();
-		String uuid = UUID.randomUUID().toString();
-		String createdAt = ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT);
-
-		context.getLogger().log("Table name: " + tableName);
-		context.getLogger().log("Received request: " + request);
-
-		Map<String, Object> bodyMap;
-        try {
-            bodyMap = objectMapper.readValue((String) request.get("body"), HashMap.class);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
-
-        // create map to store event attributes for DynamoDB
-		Map<String, AttributeValue> eventItem = new HashMap<>();
-		eventItem.put("id", new AttributeValue(uuid));
-		eventItem.put("principalId", new AttributeValue(bodyMap.get("principalId").toString()));
-		eventItem.put("createdAt", new AttributeValue(createdAt));
-		eventItem.put("body", new AttributeValue(bodyMap.get("content").toString()));
-
-		context.getLogger().log("Content to be stored: " + bodyMap.get("content"));
-		context.getLogger().log("Event: " + eventItem);
-
-		// put item in DynamoDB table
-		PutItemResult putItemResult = dynamoDB.putItem(new PutItemRequest(tableName, eventItem));
-		Map<String, AttributeValue> key = new HashMap<>();
-		key.put("id", new AttributeValue(uuid));
-		GetItemResult result = dynamoDB.getItem(new GetItemRequest(tableName, key));
-		context.getLogger().log("Item from database: " + result.getItem());
-
-		// prepare response
-		Map<String, Object> response = new HashMap<>();
-		response.put("statusCode", 201);
-		response.put("event", result.getItem());
-		context.getLogger().log("Response: " + response);
-
-		return response;
+	private void saveToDynamoDb(Map<String, AttributeValue> itemValues) {
+		AmazonDynamoDBClientBuilder.defaultClient().putItem(System.getenv("target_table"), itemValues);
 	}
 }
