@@ -25,6 +25,7 @@ public class ApiHandler implements RequestHandler<Map<String, Object>, Map<Strin
 
 	@Override
 	public Map<String, Object> handleRequest(Map<String, Object> request, Context context) {
+		String tableName = "cmtr-eef7f927-Events";
 		AmazonDynamoDB dynamoDB = AmazonDynamoDBClientBuilder.defaultClient();
 		context.getLogger().log("DynamoDB client created: " + dynamoDB);
 		String uuid = UUID.randomUUID().toString();
@@ -43,10 +44,10 @@ public class ApiHandler implements RequestHandler<Map<String, Object>, Map<Strin
 		context.getLogger().log("Event: " + eventItem);
 
 		// put item in DynamoDB table
-		PutItemResult putItemResult = dynamoDB.putItem(new PutItemRequest("Events", eventItem));
+		PutItemResult putItemResult = dynamoDB.putItem(new PutItemRequest(tableName, eventItem));
 		Map<String, AttributeValue> key = new HashMap<>();
 		key.put("id", new AttributeValue(uuid));
-		GetItemResult result = dynamoDB.getItem(new GetItemRequest("Events", key));
+		GetItemResult result = dynamoDB.getItem(new GetItemRequest(tableName, key));
 		context.getLogger().log("Item from database: " + result.getItem());
 
 		// prepare response
