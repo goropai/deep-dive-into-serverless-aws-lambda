@@ -17,6 +17,7 @@ import com.syndicate.deployment.model.ResourceType;
 import com.syndicate.deployment.model.RetentionSetting;
 
 import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -51,39 +52,35 @@ public class AuditProducer implements RequestHandler<DynamodbEvent, Void> {
 
 		Map<String, com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue> recordKeys
 				= record.getDynamodb().getKeys();
-		String updatedAt = Instant.now().toString();
-		if (recordKeys.containsKey("id")) {
-			String idValue = recordKeys.get("id").getS();
-			GetItemRequest request = new GetItemRequest()
-					.withTableName(System.getenv("target_table"))
-					.withKey(Map.of("id", new AttributeValue(idValue)));
-			Map<String, AttributeValue> existingItem = AmazonDynamoDBClientBuilder.defaultClient().getItem(request).getItem();
-			context.getLogger().log("Existing item: " + GSON.toJson(existingItem));
-
-			Map<String, AttributeValue> update = new HashMap<>();
-			update.put("id", new AttributeValue(UUID.randomUUID().toString()));
-			update.put("itemKey", new AttributeValue(record.getEventID()));
-			update.put("modificationTime", new AttributeValue(updatedAt));
-			update.put("updatedAttribute", new AttributeValue("value"));
-			update.put("oldValue", new AttributeValue().withN(existingItem.get("newValue").getM().get("value").getN()));
-			update.put("newValue", new AttributeValue().withN(record.getDynamodb().getNewImage().get("value").getN()));
-
-			putIntoAudit(update);
+		Map<String, com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue> newImage = record.getDynamodb().getNewImage();
+		Map<String, com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue> oldImage = record.getDynamodb().getOldImage();
+		String key = recordKeys.get("key").getS();
+		Map<String, AttributeValue> item = buildAuditItem(key);
+		if (oldImage != null) {
+			item.put("updatedAttribute", new AttributeValue().withS("value"));
+			item.put("oldValue", new AttributeValue().withN(oldImage.get("value").getN()));
+			item.put("newValue", new AttributeValue().withN(newImage.get("value").getN()));
 		}
 		else {
-			Map<String, AttributeValue> item = new HashMap<>();
-			item.put("id", new AttributeValue(UUID.randomUUID().toString()));
-			item.put("itemKey", new AttributeValue().withN(String.valueOf(record.getEventID())));
-			item.put("modificationTime", new AttributeValue(updatedAt));
-			item.put("newValue", new AttributeValue().withS(GSON.toJson(record.getDynamodb())));
-
-			putIntoAudit(item);
+			Map<String, AttributeValue> newValue = Map.of(
+					"key", new AttributeValue().withS(key),
+					"value", new AttributeValue().withN(newImage.get("value").getN()));
+			item.put("newValue", new AttributeValue().withM(newValue));
 		}
+		putIntoAudit(item);
+	}
+
+	private Map<String, AttributeValue> buildAuditItem(String key) {
+		Map<String, AttributeValue> item = new HashMap<>();
+		item.put("id", new AttributeValue().withS(UUID.randomUUID().toString()));
+		item.put("itemKey", new AttributeValue().withN(key));
+		item.put("modificationTime", new AttributeValue().withS(DateTimeFormatter.ISO_INSTANT.format(Instant.now())));
+		return item;
 	}
 
 	private static void putIntoAudit(Map<String, AttributeValue> update) {
 		PutItemRequest putItemRequest = new PutItemRequest()
-				.withTableName("Audit")
+				.withTableName(System.getenv("target_table"))
 				.withItem(update);
 		AmazonDynamoDBClientBuilder.defaultClient().putItem(putItemRequest);
 	}
