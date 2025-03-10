@@ -42,12 +42,6 @@
     "write_capacity": 1,
     "global_indexes": [],
     "autoscaling": [],
-    "dependencies": [
-      {
-        "resource_name": "audit_producer",
-        "resource_type": "lambda"
-      }
-    ],
     "tags": {}
   },
   "Audit": {
