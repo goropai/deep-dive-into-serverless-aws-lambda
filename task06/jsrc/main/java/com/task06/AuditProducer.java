@@ -12,6 +12,8 @@ import com.google.gson.GsonBuilder;
 import com.syndicate.deployment.annotations.environment.EnvironmentVariable;
 import com.syndicate.deployment.annotations.events.DynamoDbTriggerEventSource;
 import com.syndicate.deployment.annotations.lambda.LambdaHandler;
+import com.syndicate.deployment.annotations.resources.DependsOn;
+import com.syndicate.deployment.model.ResourceType;
 import com.syndicate.deployment.model.RetentionSetting;
 
 import java.time.Instant;
@@ -33,6 +35,7 @@ import java.util.UUID;
 		targetTable = "Configuration",
 		batchSize = 1
 )
+@DependsOn(name = "Configuration", resourceType = ResourceType.DYNAMODB_TABLE)
 public class AuditProducer implements RequestHandler<DynamodbEvent, Void> {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 

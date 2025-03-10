@@ -40,6 +40,7 @@
     "hash_key_type": "S",
     "read_capacity": 1,
     "write_capacity": 1,
+    "stream_view_type": "NEW_IMAGE",
     "global_indexes": [],
     "autoscaling": [],
     "tags": {}
