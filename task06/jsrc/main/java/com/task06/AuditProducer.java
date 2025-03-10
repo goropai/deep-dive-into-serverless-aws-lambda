@@ -73,7 +73,7 @@ public class AuditProducer implements RequestHandler<DynamodbEvent, Void> {
 	private Map<String, AttributeValue> buildAuditItem(String key) {
 		Map<String, AttributeValue> item = new HashMap<>();
 		item.put("id", new AttributeValue().withS(UUID.randomUUID().toString()));
-		item.put("itemKey", new AttributeValue().withN(key));
+		item.put("itemKey", new AttributeValue().withS(key));
 		item.put("modificationTime", new AttributeValue().withS(DateTimeFormatter.ISO_INSTANT.format(Instant.now())));
 		return item;
 	}
