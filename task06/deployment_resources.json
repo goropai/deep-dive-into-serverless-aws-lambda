@@ -33,5 +33,31 @@
     ],
     "resource_type": "iam_role",
     "tags": {}
+  },
+  "Configuration": {
+    "resource_type": "dynamodb_table",
+    "hash_key_name": "key",
+    "hash_key_type": "S",
+    "read_capacity": 1,
+    "write_capacity": 1,
+    "global_indexes": [],
+    "autoscaling": [],
+    "dependencies": [
+      {
+        "resource_name": "audit_producer",
+        "resource_type": "lambda"
+      }
+    ],
+    "tags": {}
+  },
+  "Audit": {
+    "resource_type": "dynamodb_table",
+    "hash_key_name": "id",
+    "hash_key_type": "S",
+    "read_capacity": 1,
+    "write_capacity": 1,
+    "global_indexes": [],
+    "autoscaling": [],
+    "tags": {}
   }
 }
