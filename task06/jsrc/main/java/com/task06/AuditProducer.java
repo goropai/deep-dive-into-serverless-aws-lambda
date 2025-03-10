@@ -55,11 +55,15 @@ public class AuditProducer implements RequestHandler<DynamodbEvent, Void> {
 		Map<String, com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue> newImage = record.getDynamodb().getNewImage();
 		Map<String, com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue> oldImage = record.getDynamodb().getOldImage();
 		String key = recordKeys.get("key").getS();
+		context.getLogger().log("Key: " + key);
 		Map<String, AttributeValue> item = buildAuditItem(key);
+		context.getLogger().log("Base Item created: " + GSON.toJson(item));
 		if (oldImage != null) {
 			item.put("updatedAttribute", new AttributeValue().withS("value"));
 			item.put("oldValue", new AttributeValue().withN(oldImage.get("value").getN()));
 			item.put("newValue", new AttributeValue().withN(newImage.get("value").getN()));
+			context.getLogger().log("Old Image: " + GSON.toJson(oldImage));
+			context.getLogger().log("New Image: " + GSON.toJson(newImage));
 		}
 		else {
 			Map<String, AttributeValue> newValue = Map.of(
@@ -67,6 +71,8 @@ public class AuditProducer implements RequestHandler<DynamodbEvent, Void> {
 					"value", new AttributeValue().withN(newImage.get("value").getN()));
 			item.put("newValue", new AttributeValue().withM(newValue));
 		}
+		context.getLogger().log("Saving to the table: " + System.getenv("target_table"));
+		context.getLogger().log("Updated Item: " + GSON.toJson(item));
 		putIntoAudit(item);
 	}
 
