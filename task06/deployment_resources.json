@@ -22,8 +22,7 @@
       ],
       "Version": "2012-10-17"
     },
-    "resource_type": "iam_policy",
-    "tags": {}
+    "resource_type": "iam_policy"
   },
   "lambda-dynamo-subscriber": {
     "policy_content": {
@@ -41,8 +40,7 @@
       ],
       "Version": "2012-10-17"
     },
-    "resource_type": "iam_policy",
-    "tags": {}
+    "resource_type": "iam_policy"
   },
   "audit_producer-role": {
     "predefined_policies": [],
@@ -51,8 +49,7 @@
       "lambda-basic-execution",
       "lambda-dynamo-subscriber"
     ],
-    "resource_type": "iam_role",
-    "tags": {}
+    "resource_type": "iam_role"
   },
   "Configuration": {
     "resource_type": "dynamodb_table",
@@ -60,10 +57,8 @@
     "hash_key_type": "S",
     "read_capacity": 1,
     "write_capacity": 1,
-    "stream_view_type": "NEW_IMAGE",
     "global_indexes": [],
-    "autoscaling": [],
-    "tags": {}
+    "autoscaling": []
   },
   "Audit": {
     "resource_type": "dynamodb_table",
@@ -72,7 +67,6 @@
     "read_capacity": 1,
     "write_capacity": 1,
     "global_indexes": [],
-    "autoscaling": [],
-    "tags": {}
+    "autoscaling": []
   }
 }
