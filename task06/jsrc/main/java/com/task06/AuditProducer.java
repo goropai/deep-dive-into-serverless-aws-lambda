@@ -17,13 +17,20 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-@LambdaHandler(lambdaName = "audit_producer",
+@LambdaHandler(
+		lambdaName = "audit_producer",
 		roleName = "audit_producer-role",
-		isPublishVersion = false,
-		logsExpiration = RetentionSetting.SYNDICATE_ALIASES_SPECIFIED
+		aliasName = "${lambdas_alias_name}",
+        logsExpiration = RetentionSetting.SYNDICATE_ALIASES_SPECIFIED
 )
-@DynamoDbTriggerEventSource(targetTable = "Configuration", batchSize = 1)
-@EnvironmentVariable(key = "target_table", value = "${target_table}")
+@DynamoDbTriggerEventSource(
+		targetTable = "Configuration",
+		batchSize = 1
+)
+@EnvironmentVariable(
+		key = "target_table",
+		value = "${target_table}"
+)
 public class AuditProducer implements RequestHandler<DynamodbEvent, Void> {
 	private final String tableName;
 	private final DynamoDbClient client = DynamoDbClient.builder().build();
