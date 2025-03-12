@@ -24,14 +24,18 @@
       "runtime": "VTL",
       "request_mapping_template_path": "resolvers/mutation/createevent/req_mapping_template.vtl",
       "response_mapping_template_path": "resolvers/mutation/createevent/resp_mapping_template.vtl"
+    },
+    {
+      "kind": "UNIT",
+      "type_name": "Query",
+      "field_name": "getEvent",
+      "data_source_name": "events_db",
+      "runtime": "VTL",
+      "request_mapping_template_path": "resolvers/query/getevent/req_mapping_template.vtl",
+      "response_mapping_template_path": "resolvers/query/getevent/resp_mapping_template.vtl"
     }
   ],
   "functions": [],
-  "log_config": {
-    "logging_enabled": false,
-    "field_log_level": "ERROR",
-    "cloud_watch_logs_role_name": "",
-    "exclude_verbose_content": false
-  },
-  "tags": {}
+  "tags": {},
+  "deployment_package": "appsync_GraphQL_API.zip"
 }
