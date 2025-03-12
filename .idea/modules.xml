@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/deep-dive-into-serverless-aws-lambda.iml" filepath="$PROJECT_DIR$/.idea/deep-dive-into-serverless-aws-lambda.iml" />
+      <module fileurl="file://$PROJECT_DIR$/task07/task07.iml" filepath="$PROJECT_DIR$/task07/task07.iml" />
     </modules>
   </component>
 </project>
