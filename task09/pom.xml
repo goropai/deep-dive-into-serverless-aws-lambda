@@ -26,20 +26,30 @@
             <version>1.2.0</version>
         </dependency>
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-lambda-java-events</artifactId>
-            <version>3.11.4</version>
+            <groupId>demo.custom.http.core</groupId>
+            <artifactId>commons-http-core-library</artifactId>
+            <version>4.4.13</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/lib/httpcore-4.4.13.jar</systemPath>
         </dependency>
         <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
-            <version>4.5.14</version>
+            <groupId>demo.custom.http.client</groupId>
+            <artifactId>commons-http-core-client</artifactId>
+            <version>4.5.13</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/lib/httpclient-4.5.13.jar</systemPath>
         </dependency>
         <!--Syndicate annotations-->
         <dependency>
             <groupId>net.sf.aws-syndicate</groupId>
             <artifactId>deployment-configuration-annotations</artifactId>
             <version>${syndicate.java.plugin.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-lambda-java-events</artifactId>
+            <version>3.14.0</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 
