@@ -4,8 +4,8 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>task08-group</groupId>
-    <artifactId>task08</artifactId>
+    <groupId>task09-group</groupId>
+    <artifactId>task09</artifactId>
     <version>1.0.0</version>
 
     <properties>
@@ -71,7 +71,7 @@
                 <version>${syndicate.java.plugin.version}</version>
                 <configuration>
                     <packages>
-                        <package>com.task08</package>
+                        <package>com.task09</package>
                     </packages>
                     <fileName>${project.name}-${project.version}.jar</fileName>
                 </configuration>
