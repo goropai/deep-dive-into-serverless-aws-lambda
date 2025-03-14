@@ -3,6 +3,7 @@ package com.task09a;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPEvent;
+import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.syndicate.deployment.annotations.lambda.LambdaHandler;
 import com.syndicate.deployment.annotations.lambda.LambdaLayer;
@@ -15,7 +16,6 @@ import com.syndicate.deployment.model.lambda.url.AuthType;
 import com.syndicate.deployment.model.lambda.url.InvokeMode;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 
 @LambdaHandler(
@@ -59,7 +59,7 @@ public class ApiHandler implements RequestHandler<APIGatewayV2HTTPEvent, Object>
 		else {
 			String errorMessage = String.format("Bad request syntax or unsupported method. " +
 					"Request path: %s. HTTP method: %s", path, httpMethod);
-			return Map.of("statusCode", 400, "message", errorMessage);
+			return new Gson().toJson(Map.of("statusCode", 400, "message", errorMessage));
 		}
 	}
 }
