@@ -2,6 +2,7 @@ package com.task09;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPEvent;
 import com.google.gson.JsonObject;
 import com.syndicate.deployment.annotations.lambda.LambdaHandler;
 import com.syndicate.deployment.annotations.lambda.LambdaLayer;
@@ -35,11 +36,11 @@ import java.util.Map;
 		authType = AuthType.NONE,
 		invokeMode = InvokeMode.BUFFERED
 )
-public class ApiHandler implements RequestHandler<Map<String, Object>, Object> {
+public class ApiHandler implements RequestHandler<APIGatewayV2HTTPEvent, Object> {
 
-	public Object handleRequest(Map<String, Object> request, Context context) {
-		String httpMethod = (String) request.get("httpMethod");
-		String path = (String) request.get("path");
+	public Object handleRequest(APIGatewayV2HTTPEvent request, Context context) {
+		String httpMethod = request.getRequestContext().getHttp().getMethod();
+		String path = request.getRequestContext().getHttp().getPath();
 		if ("GET".equalsIgnoreCase(httpMethod) && "/weather".equals(path)) {
 
 			App client = new App(52.52, 13.41);
