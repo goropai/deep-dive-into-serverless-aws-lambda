@@ -2,6 +2,8 @@ package com.task10a;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPEvent;
+import com.google.gson.JsonObject;
 import com.syndicate.deployment.annotations.environment.EnvironmentVariable;
 import com.syndicate.deployment.annotations.lambda.LambdaHandler;
 import com.syndicate.deployment.annotations.lambda.LambdaLayer;
@@ -10,6 +12,7 @@ import com.syndicate.deployment.model.*;
 import com.syndicate.deployment.model.lambda.url.AuthType;
 import com.syndicate.deployment.model.lambda.url.InvokeMode;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -36,13 +39,18 @@ import java.util.Map;
 		invokeMode = InvokeMode.BUFFERED
 )
 @EnvironmentVariable(key = "target_table", value = "${target_table}")
-public class Processor implements RequestHandler<Object, Map<String, Object>> {
+public class Processor implements RequestHandler<APIGatewayV2HTTPEvent, Object> {
 
-	public Map<String, Object> handleRequest(Object request, Context context) {
-		System.out.println("Hello from lambda");
-		Map<String, Object> resultMap = new HashMap<String, Object>();
-		resultMap.put("statusCode", 200);
-		resultMap.put("body", "Hello from Lambda");
-		return resultMap;
+	public Object handleRequest(APIGatewayV2HTTPEvent request, Context context) {
+		context.getLogger().log("Request received: " + request);
+		App client = new App(50.4375, 30.5);
+		try {
+			JsonObject weatherData = client.getWeatherForecast();
+			context.getLogger().log("Weather received: " + weatherData.toString());
+			//persist.persistData(weatherData, System.getenv("target_table"), context.getLogger());
+			return weatherData.toString();
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
 	}
 }
