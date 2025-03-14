@@ -29,7 +29,7 @@ import java.util.Map;
 		libraries = {"lib/sdk-1.10.0.jar"},
 		runtime = DeploymentRuntime.JAVA11,
 		architectures = {Architecture.ARM64},
-		artifactExtension = ArtifactExtension.JAR
+		artifactExtension = ArtifactExtension.ZIP
 )
 @LambdaUrlConfig(
 		authType = AuthType.NONE,
