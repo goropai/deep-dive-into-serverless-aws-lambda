@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="api_handler-layer-assembly2">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/task09/api_handler-layer-assembly.zip!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

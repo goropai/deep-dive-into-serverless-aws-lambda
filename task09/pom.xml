@@ -10,7 +10,7 @@
 
     <properties>
         <maven-shade-plugin.version>3.5.2</maven-shade-plugin.version>
-        <syndicate.java.plugin.version>1.11.1</syndicate.java.plugin.version>
+        <syndicate.java.plugin.version>1.15.0</syndicate.java.plugin.version>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -19,23 +19,11 @@
     </properties>
 
     <dependencies>
-        <!-- https://mvnrepository.com/artifact/com.open-meteo/sdk -->
-        <dependency>
-            <groupId>com.open-meteo</groupId>
-            <artifactId>sdk</artifactId>
-            <version>1.10.0</version>
-        </dependency>
-
         <!-- AWS dependencies-->
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-lambda-java-core</artifactId>
             <version>1.2.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-lambda-java-events</artifactId>
-            <version>3.9.0</version>
         </dependency>
         <!--Syndicate annotations-->
         <dependency>
@@ -43,20 +31,12 @@
             <artifactId>deployment-configuration-annotations</artifactId>
             <version>${syndicate.java.plugin.version}</version>
         </dependency>
-        <dependency>
-            <groupId>com.squareup.okhttp3</groupId>
-            <artifactId>okhttp</artifactId>
-            <version>4.12.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <version>2.10</version>
-        </dependency>
+
+
         <dependency>
             <groupId>org.example</groupId>
-            <artifactId>OpenMeteoApiTask</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <artifactId>sdk</artifactId>
+            <version>1.10.0</version>
             <scope>system</scope>
             <systemPath>${basedir}/lib/sdk-1.10.0.jar</systemPath>
         </dependency>
@@ -67,16 +47,14 @@
             <scope>compile</scope>
         </dependency>
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-lambda-java-events</artifactId>
-            <version>3.14.0</version>
-            <scope>compile</scope>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10</version>
         </dependency>
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-lambda-java-events</artifactId>
-            <version>3.14.0</version>
-            <scope>compile</scope>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>4.12.0</version>
         </dependency>
     </dependencies>
 
@@ -86,7 +64,7 @@
             <resource>
                 <directory>${resources.dir}</directory>
             </resource>
-        </resources>
+        </resources>        
         <plugins>
             <plugin>
                 <groupId>net.sf.aws-syndicate</groupId>

@@ -14,8 +14,7 @@
             "dynamodb:DeleteItem",
             "ssm:PutParameter",
             "ssm:GetParameter",
-            "kms:Decrypt",
-            "lambda:GetFunctionUrlConfig"
+            "kms:Decrypt"
           ],
           "Effect": "Allow",
           "Resource": "*"
@@ -23,7 +22,8 @@
       ],
       "Version": "2012-10-17"
     },
-    "resource_type": "iam_policy"
+    "resource_type": "iam_policy",
+    "tags": {}
   },
   "api_handler-role": {
     "predefined_policies": [],
@@ -31,6 +31,7 @@
     "custom_policies": [
       "lambda-basic-execution"
     ],
-    "resource_type": "iam_role"
+    "resource_type": "iam_role",
+    "tags": {}
   }
 }

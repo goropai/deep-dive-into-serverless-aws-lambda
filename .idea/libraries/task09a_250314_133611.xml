@@ -1,0 +1,10 @@
+<component name="libraryTable">
+  <library name="task09a_250314.133611">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/task09/.syndicate-config-dev/bundles/task09a_250314.133611/task09a-1.0.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/task09/.syndicate-config-dev/bundles/task09a_250314.133611/api_handler-layer-assembly.zip!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
