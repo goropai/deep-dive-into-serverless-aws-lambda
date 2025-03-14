@@ -1,7 +1,5 @@
 package com.task10;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPEvent;
@@ -11,10 +9,7 @@ import com.syndicate.deployment.annotations.environment.EnvironmentVariable;
 import com.syndicate.deployment.annotations.lambda.LambdaHandler;
 import com.syndicate.deployment.annotations.lambda.LambdaLayer;
 import com.syndicate.deployment.annotations.lambda.LambdaUrlConfig;
-import com.syndicate.deployment.model.Architecture;
-import com.syndicate.deployment.model.ArtifactExtension;
-import com.syndicate.deployment.model.DeploymentRuntime;
-import com.syndicate.deployment.model.RetentionSetting;
+import com.syndicate.deployment.model.*;
 import com.syndicate.deployment.model.lambda.url.AuthType;
 import com.syndicate.deployment.model.lambda.url.InvokeMode;
 
@@ -27,6 +22,7 @@ import java.util.Map;
         layers = "weather-api-layer",
         isPublishVersion = true,
         aliasName = "${lambdas_alias_name}",
+        tracingMode = TracingMode.Active,
         runtime = DeploymentRuntime.JAVA11,
         architecture = Architecture.ARM64,
         logsExpiration = RetentionSetting.SYNDICATE_ALIASES_SPECIFIED
@@ -44,8 +40,7 @@ import java.util.Map;
 )
 @EnvironmentVariable(key = "target_table", value = "${target_table}")
 public class Processor implements RequestHandler<APIGatewayV2HTTPEvent, Object> {
-    private final AmazonDynamoDB amazonDynamoDB = AmazonDynamoDBClientBuilder.standard().build();
-    private final DynamoDBPersister persist = new DynamoDBPersister(amazonDynamoDB);
+    private final DynamoDBPersister persist = new DynamoDBPersister();
 
     public Object handleRequest(APIGatewayV2HTTPEvent request, Context context) {
         context.getLogger().log("Request received: " + request);

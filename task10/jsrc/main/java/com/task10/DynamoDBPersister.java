@@ -1,27 +1,31 @@
 package com.task10;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import com.google.gson.JsonObject;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
 public class DynamoDBPersister {
-    private final AmazonDynamoDB amazonDynamoDB;
-
-    public DynamoDBPersister(AmazonDynamoDB amazonDynamoDB) {
-        this.amazonDynamoDB = amazonDynamoDB;
-    }
 
     public void persistData(JsonObject weatherData, String targetTable, LambdaLogger logger) {
         logger.log("Persisting data to DynamoDB table: " + targetTable);
-        Map<String, AttributeValue> attributesMap = new HashMap<>();
-        attributesMap.put("id", new AttributeValue(UUID.randomUUID().toString()));
-        attributesMap.put("forecast", new AttributeValue().withS(weatherData.toString()));
-        amazonDynamoDB.putItem(targetTable, attributesMap);
-        logger.log("Data saved: " + attributesMap);
+        try (DynamoDbClient client = DynamoDbClient.builder().build()) {
+            PutItemRequest request = PutItemRequest.builder()
+                    .tableName(targetTable)
+                    .item(Map.of(
+                            "id", AttributeValue.builder().s(UUID.randomUUID().toString()).build(),
+                            "forecast", AttributeValue.builder().s(weatherData.toString()).build()
+                    ))
+                    .build();
+            client.putItem(request);
+            logger.log("Data saved: " + request.item());
+        }
+        catch (Exception e) {
+            logger.log("Error saving data: " + e.getMessage());
+        }
     }
 }
