@@ -8,6 +8,7 @@
         <outputRelativeToContentRoot value="true" />
         <module name="task09" />
         <module name="task08" />
+        <module name="task10a" />
         <module name="task05" />
         <module name="task06" />
         <module name="task03" />
