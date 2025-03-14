@@ -11,13 +11,13 @@
         <option value="$PROJECT_DIR$/task05/pom.xml" />
         <option value="$PROJECT_DIR$/task06/pom.xml" />
         <option value="$PROJECT_DIR$/task08/pom.xml" />
-        <option value="$PROJECT_DIR$/task09/pom.xml" />
         <option value="$PROJECT_DIR$/task09a/pom.xml" />
+        <option value="$PROJECT_DIR$/task09/pom.xml" />
+        <option value="$PROJECT_DIR$/task10/pom.xml" />
       </list>
     </option>
     <option name="ignoredFiles">
       <set>
-        <option value="$PROJECT_DIR$/task09/pom.xml" />
         <option value="$PROJECT_DIR$/task09a/pom.xml" />
       </set>
     </option>
