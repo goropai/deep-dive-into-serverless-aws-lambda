@@ -53,7 +53,7 @@
             <artifactId>OpenMeteoApiTask</artifactId>
             <version>1.0-SNAPSHOT</version>
             <scope>system</scope>
-            <systemPath>${basedir}/lib/OpenMeteoApiTask-1.0-SNAPSHOT.jar</systemPath>
+            <systemPath>${basedir}/lib/sdk-1.10.0.jar</systemPath>
         </dependency>
     </dependencies>
 

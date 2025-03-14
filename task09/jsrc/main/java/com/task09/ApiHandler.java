@@ -26,10 +26,10 @@ import java.util.Map;
 )
 @LambdaLayer(
 		layerName = "sdk-layer",
-		libraries = {"lib/OpenMeteoApiTask-1.0-SNAPSHOT.jar"},
+		libraries = {"lib/sdk-1.10.0.jar"},
 		runtime = DeploymentRuntime.JAVA11,
 		architectures = {Architecture.ARM64},
-		artifactExtension = ArtifactExtension.ZIP
+		artifactExtension = ArtifactExtension.JAR
 )
 @LambdaUrlConfig(
 		authType = AuthType.NONE,
