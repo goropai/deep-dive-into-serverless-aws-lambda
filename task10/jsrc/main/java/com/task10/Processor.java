@@ -42,7 +42,7 @@ public class Processor implements RequestHandler<APIGatewayV2HTTPEvent, Object> 
 
     public Object handleRequest(APIGatewayV2HTTPEvent request, Context context) {
         context.getLogger().log("Request received: " + request);
-        App client = new App(52.52, 13.41);
+        App client = new App(50.4375, 30.5);
         try {
             JsonObject weatherData = client.getWeatherForecast();
             context.getLogger().log("Weather received: " + weatherData.toString());
