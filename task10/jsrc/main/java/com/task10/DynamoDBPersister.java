@@ -18,7 +18,7 @@ public class DynamoDBPersister {
                     .tableName(targetTable)
                     .item(Map.of(
                             "id", AttributeValue.builder().s(UUID.randomUUID().toString()).build(),
-                            "forecast", AttributeValue.builder().s(weatherData.toString()).build()
+                            "forecast", AttributeValue.builder().s(weatherData.getAsString()).build()
                     ))
                     .build();
             client.putItem(request);
