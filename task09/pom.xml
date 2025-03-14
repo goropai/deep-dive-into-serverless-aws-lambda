@@ -4,13 +4,13 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>task09-group</groupId>
-    <artifactId>task09</artifactId>
+    <groupId>task08-group</groupId>
+    <artifactId>task08</artifactId>
     <version>1.0.0</version>
 
     <properties>
         <maven-shade-plugin.version>3.5.2</maven-shade-plugin.version>
-        <syndicate.java.plugin.version>1.15.0</syndicate.java.plugin.version>
+        <syndicate.java.plugin.version>1.11.1</syndicate.java.plugin.version>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -19,25 +19,18 @@
     </properties>
 
     <dependencies>
+        <!-- https://mvnrepository.com/artifact/com.open-meteo/sdk -->
+        <dependency>
+            <groupId>com.open-meteo</groupId>
+            <artifactId>sdk</artifactId>
+            <version>1.10.0</version>
+        </dependency>
+
         <!-- AWS dependencies-->
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-lambda-java-core</artifactId>
             <version>1.2.0</version>
-        </dependency>
-        <dependency>
-            <groupId>demo.custom.http.core</groupId>
-            <artifactId>commons-http-core-library</artifactId>
-            <version>4.4.13</version>
-            <scope>system</scope>
-            <systemPath>${basedir}/lib/httpcore-4.4.13.jar</systemPath>
-        </dependency>
-        <dependency>
-            <groupId>demo.custom.http.client</groupId>
-            <artifactId>commons-http-core-client</artifactId>
-            <version>4.5.13</version>
-            <scope>system</scope>
-            <systemPath>${basedir}/lib/httpclient-4.5.13.jar</systemPath>
         </dependency>
         <!--Syndicate annotations-->
         <dependency>
@@ -46,10 +39,21 @@
             <version>${syndicate.java.plugin.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-lambda-java-events</artifactId>
-            <version>3.14.0</version>
-            <scope>compile</scope>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>4.12.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10</version>
+        </dependency>
+        <dependency>
+            <groupId>org.example</groupId>
+            <artifactId>OpenMeteoApiTask</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/lib/OpenMeteoApiTask-1.0-SNAPSHOT.jar</systemPath>
         </dependency>
     </dependencies>
 
@@ -59,7 +63,7 @@
             <resource>
                 <directory>${resources.dir}</directory>
             </resource>
-        </resources>        
+        </resources>
         <plugins>
             <plugin>
                 <groupId>net.sf.aws-syndicate</groupId>
@@ -67,7 +71,7 @@
                 <version>${syndicate.java.plugin.version}</version>
                 <configuration>
                     <packages>
-                        <package>com.task09</package>
+                        <package>com.task08</package>
                     </packages>
                     <fileName>${project.name}-${project.version}.jar</fileName>
                 </configuration>
