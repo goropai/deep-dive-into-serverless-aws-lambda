@@ -1,497 +1,304 @@
 package com.task11;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.document.Item;
-import com.amazonaws.services.dynamodbv2.document.ItemUtils;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.amazonaws.services.dynamodbv2.model.ScanRequest;
-import com.amazonaws.services.dynamodbv2.model.ScanResult;
 import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
+import com.google.gson.JsonParseException;
 import com.syndicate.deployment.annotations.environment.EnvironmentVariable;
 import com.syndicate.deployment.annotations.environment.EnvironmentVariables;
 import com.syndicate.deployment.annotations.lambda.LambdaHandler;
-import com.syndicate.deployment.annotations.lambda.LambdaUrlConfig;
 import com.syndicate.deployment.annotations.resources.DependsOn;
 import com.syndicate.deployment.model.ResourceType;
-import com.syndicate.deployment.model.RetentionSetting;
-import com.syndicate.deployment.model.lambda.url.AuthType;
-import com.syndicate.deployment.model.lambda.url.InvokeMode;
-import com.task11.utils.CognitoHelper;
-import com.task11.utils.EmailValidator;
-import com.task11.utils.PasswordValidator;
+import com.task11.utils.Validator;
+import lombok.Data;
+import lombok.Value;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderClient;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.*;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 
-import java.time.LocalTime;
 import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static com.syndicate.deployment.model.environment.ValueTransformer.USER_POOL_NAME_TO_CLIENT_ID;
 import static com.syndicate.deployment.model.environment.ValueTransformer.USER_POOL_NAME_TO_USER_POOL_ID;
 
-@LambdaHandler(
-    lambdaName = "api_handler",
-	roleName = "api_handler-role",
-	isPublishVersion = true,
-	aliasName = "${lambdas_alias_name}",
-	logsExpiration = RetentionSetting.SYNDICATE_ALIASES_SPECIFIED
-)
-@LambdaUrlConfig(
-		authType = AuthType.NONE,
-		invokeMode = InvokeMode.BUFFERED
-)
+@LambdaHandler(lambdaName = "api_handler", roleName = "api_handler-role",
+		aliasName = "learn", isPublishVersion = true)
+@DependsOn(name = "${booking_userpool}", resourceType = ResourceType.COGNITO_USER_POOL)
 @DependsOn(name = "${tables_table}", resourceType = ResourceType.DYNAMODB_TABLE)
 @DependsOn(name = "${reservations_table}", resourceType = ResourceType.DYNAMODB_TABLE)
-@DependsOn(resourceType = ResourceType.COGNITO_USER_POOL, name = "${booking_userpool}")
 @EnvironmentVariables(value = {
+		@EnvironmentVariable(key = "region", value = "${region}"),
+		@EnvironmentVariable(key = "user_pool_id", value = "${booking_userpool}",
+				valueTransformer = USER_POOL_NAME_TO_USER_POOL_ID),
+		@EnvironmentVariable(key = "client_id", value = "${booking_userpool}",
+				valueTransformer = USER_POOL_NAME_TO_CLIENT_ID),
 		@EnvironmentVariable(key = "tables_table", value = "${tables_table}"),
 		@EnvironmentVariable(key = "reservations_table", value = "${reservations_table}"),
-		@EnvironmentVariable(key = "booking_userpool", value = "${booking_userpool}"),
-		@EnvironmentVariable(key = "COGNITO_ID", value = "${booking_userpool}", valueTransformer = USER_POOL_NAME_TO_USER_POOL_ID),
-		@EnvironmentVariable(key = "CLIENT_ID", value = "${booking_userpool}", valueTransformer = USER_POOL_NAME_TO_CLIENT_ID)
 })
 public class ApiHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
-	private final CognitoIdentityProviderClient cognitoClient = CognitoIdentityProviderClient.create();
-	private LambdaLogger logger = null;
+	private static final Gson gson = new Gson();
+	private static final CognitoIdentityProviderClient cognito = CognitoIdentityProviderClient.create();
+	// Dynamo API, don't know if these are thread-safe and if it makes sense to reuse them
+	private static final DynamoDbClient dynamo = DynamoDbClient.create();
+	private static final DynamoDbEnhancedClient dynamoEnhanced = DynamoDbEnhancedClient.builder()
+			.dynamoDbClient(dynamo).build();
+	private static final DynamoDbTable<Table> tablesTable = dynamoEnhanced
+			.table(System.getenv("tables_table"), TableSchema.fromBean(Table.class));
+	private static final DynamoDbTable<Reservation> reservationsTable = dynamoEnhanced
+			.table(System.getenv("reservations_table"), TableSchema.fromBean(Reservation.class));
 
-	public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent event, Context context) {
-		logger = context.getLogger();
-		ObjectMapper objectMapper = new ObjectMapper();
-		Map<String, String> request;
+	@Override
+	public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent requestEvent, Context context) {
+		context.getLogger().log("System Environment: " + gson.toJson(System.getenv()));
+		context.getLogger().log("Request Event: " + gson.toJson(requestEvent));
+		APIGatewayProxyResponseEvent responseEvent;
 		try {
-			request = objectMapper.readValue(objectMapper.writeValueAsString(event), LinkedHashMap.class);
-		} catch (JsonProcessingException e) {
-			throw new RuntimeException(e);
-		}
-
-		String path = (String) request.get("path");
-		String method = (String) request.get("httpMethod");
-
-
-		logger.log("Path: " + path + " method: " + method);
-		try {
-			logger.log("Request: " + objectMapper.writeValueAsString(event));
-		} catch (JsonProcessingException e) {
-			throw new RuntimeException(e);
-		}
-
-
-		if ("/signup".equals(path) && "POST".equalsIgnoreCase(method)) {
-			return signUp(event);
-		}
-
-		if ("/signin".equals(path) && "POST".equalsIgnoreCase(method)) {
-			return signIn(event);
-		}
-
-		if("/tables".equals(path) && "POST".equalsIgnoreCase(method)){
-			return postTable(event);
-		}
-
-		if("/tables".equals(path) && "GET".equalsIgnoreCase(method)){
-			return getTables();
-		}
-
-		Map<String, Object> pathParameters = null;
-		try {
-			pathParameters = objectMapper.readValue(objectMapper.writeValueAsString(event.getPathParameters()), LinkedHashMap.class);
-		} catch (JsonProcessingException e) {
-			throw new RuntimeException(e);
-		}
-		if ("GET".equalsIgnoreCase(method) && pathParameters != null) {
-			if (pathParameters.containsKey("tableId")) {
-				try {
-					return getTableById(objectMapper.writeValueAsString(event.getPathParameters().get("tableId")));
-				} catch (JsonProcessingException e) {
-					throw new RuntimeException(e);
-				}
-			}
-		}
-
-		if("/reservations".equals(path) && "POST".equalsIgnoreCase(method)){
-			return postReservation(event);
-		}
-
-		if("/reservations".equals(path) && "GET".equalsIgnoreCase(method)){
-			return getReservations();
-		}
-
-		return new APIGatewayProxyResponseEvent();
-	}
-
-	private APIGatewayProxyResponseEvent signUp(APIGatewayProxyRequestEvent event) {
-		APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
-		ObjectMapper objectMapper = new ObjectMapper();
-		try {
-			Map<String, Object> body = objectMapper.readValue(event.getBody(), Map.class);
-			logger.log("signUp was called");
-			String email = String.valueOf(body.get("email"));
-			String password = String.valueOf(body.get("password"));
-
-			if (!EmailValidator.validateEmail(email)) {
-				logger.log("Email is invalid");
-				throw new Exception("Email is invalid");
-			}
-
-			if (!PasswordValidator.validatePassword(password)) {
-				logger.log("Password is invalid");
-				throw new Exception("Email is invalid");
-			}
-
-			String userPoolId = new CognitoHelper().getUserPoolIdByName(System.getenv("bookingUserPool"))
-					.orElseThrow(() -> new IllegalArgumentException("No such user pool"));
-
-			AdminCreateUserRequest adminCreateUserRequest = AdminCreateUserRequest
-					.builder()
-					.userPoolId(userPoolId)
-					.username(email)
-					.userAttributes(AttributeType.builder().name("email").value(email).build())
-					.messageAction(MessageActionType.SUPPRESS)
-					.build();
-			logger.log(adminCreateUserRequest.toString());
-			AdminSetUserPasswordRequest adminSetUserPassword = AdminSetUserPasswordRequest
-					.builder()
-					.password(password)
-					.userPoolId(userPoolId)
-					.username(email)
-					.permanent(true)
-					.build();
-			logger.log(adminSetUserPassword.toString());
-
-			cognitoClient.adminCreateUser(adminCreateUserRequest);
-			cognitoClient.adminSetUserPassword(adminSetUserPassword);
-
-			response.setStatusCode(200);
-
-		} catch (Exception ex) {
-			logger.log(String.valueOf(ex));
-			response.setStatusCode(400);
-			response.setBody(ex.toString());
-		}
-		return response;
-	}
-
-	private APIGatewayProxyResponseEvent signIn(APIGatewayProxyRequestEvent event) {
-		logger.log("signIn was called");
-		APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
-		ObjectMapper objectMapper = new ObjectMapper();
-
-		try {
-
-			Map<String, Object> body = objectMapper.readValue(event.getBody(), Map.class);
-			logger.log("signUp was called");
-			String email = String.valueOf(body.get("email"));
-			String password = String.valueOf(body.get("password"));
-
-			if (!EmailValidator.validateEmail(email)) {
-				logger.log("Email is invalid");
-				throw new Exception("Email is invalid");
-			}
-
-			if (!PasswordValidator.validatePassword(password)) {
-				logger.log("Password is invalid");
-				throw new Exception("Email is invalid");
-			}
-
-			String userPoolId = new CognitoHelper().getUserPoolIdByName(System.getenv("bookingUserPool"))
-					.orElseThrow(() -> new IllegalArgumentException("No such user pool"));
-
-			String clientId = new CognitoHelper()
-					.getClientIdByUserPoolName(System.getenv("bookingUserPool"))
-					.orElseThrow(() -> new IllegalArgumentException("No such client id"));
-
-			Map<String, String> authParams = new HashMap<>();
-			authParams.put("USERNAME", email);
-			authParams.put("PASSWORD", password);
-			logger.log(authParams.toString());
-			AdminInitiateAuthRequest authRequest = AdminInitiateAuthRequest.builder()
-					.authFlow(AuthFlowType.ADMIN_NO_SRP_AUTH)
-					.userPoolId(userPoolId)
-					.clientId(clientId)
-					.authParameters(authParams)
-					.build();
-			logger.log(String.valueOf(authRequest));
-
-			AdminInitiateAuthResponse result = cognitoClient.adminInitiateAuth(authRequest);
-			String accessToken = result.authenticationResult().idToken();
-			logger.log(accessToken);
-
-			Map<String, Object> jsonResponse = new HashMap<>();
-			jsonResponse.put("accessToken", accessToken);
-
-			response.setStatusCode(200);
-			response.setBody(objectMapper.writeValueAsString(jsonResponse));
-			logger.log(objectMapper.writeValueAsString(jsonResponse));
-		} catch (Exception ex) {
-			logger.log(String.valueOf(ex));
-			response.setStatusCode(400);
-			response.setBody(ex.toString());
-		}
-		return response;
-	}
-
-
-	private APIGatewayProxyResponseEvent postTable(APIGatewayProxyRequestEvent event) {
-		logger.log("postTable was called");
-		APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
-		ObjectMapper objectMapper = new ObjectMapper();
-		AmazonDynamoDB ddb = AmazonDynamoDBClientBuilder.standard().build();
-		try {
-
-
-			Map<String, Object> body = objectMapper.readValue(event.getBody(), Map.class);
-			logger.log(body.toString());
-			String id = String.valueOf(body.get("id"));
-			int number = (Integer) body.get("number");
-			int places = (Integer) body.get("places");
-			boolean isVip = (Boolean) body.get("isVip");
-			int minOrder = -1;
-			if (body.containsKey("minOrder")) {
-				minOrder = (Integer) body.get("minOrder");
-			}
-
-			Item item = new Item()
-					.withString("id", id)
-					.withInt("number", number)
-					.withInt("places", places)
-					.withBoolean("isVip", isVip);
-			if (minOrder != -1) {
-				item.withInt("minOrder", minOrder);
-			}
-			logger.log(String.valueOf(item));
-			ddb.putItem(System.getenv("tablesTable"), ItemUtils.toAttributeValues(item));
-
-
-			Map<String, Object> jsonResponse = new HashMap<>();
-			jsonResponse.put("id", Integer.parseInt(id));
-			logger.log(jsonResponse.toString());
-			response.setStatusCode(200);
-			response.setBody(objectMapper.writeValueAsString(jsonResponse));
-		} catch (
-				Exception ex) {
-			logger.log(String.valueOf(ex));
-			response.setStatusCode(400);
-			response.setBody(ex.toString());
-		}
-		return response;
-	}
-
-	private APIGatewayProxyResponseEvent getTables() {
-		logger.log("getTables was called");
-		APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
-		ObjectMapper objectMapper = new ObjectMapper();
-		try {
-			AmazonDynamoDB ddb = AmazonDynamoDBClientBuilder.standard()
-					.withRegion(System.getenv("region"))
-					.build();
-
-			ScanRequest scanRequest = new ScanRequest().withTableName(System.getenv("tablesTable"));
-			ScanResult scanResult = ddb.scan(scanRequest);
-			logger.log(String.valueOf(scanResult));
-
-			List<Map<String, Object>> tables = new ArrayList<>();
-			for (Map<String, AttributeValue> item : scanResult.getItems()) {
-				Map<String, Object> table = new LinkedHashMap<>();
-				table.put("id", Integer.parseInt(item.get("id").getS()));
-				table.put("number", Integer.parseInt(item.get("number").getN()));
-				table.put("places", Integer.parseInt(item.get("places").getN()));
-				table.put("isVip", Boolean.parseBoolean(item.get("isVip").getBOOL().toString()));
-				table.put("minOrder", Integer.parseInt(item.get("minOrder").getN()));
-				tables.add(table);
-			}
-			logger.log(tables.toString());
-
-			tables.sort(Comparator.comparing(o -> (Integer) o.get("id")));
-			Map<String, Object> jsonResponse = new HashMap<>();
-			jsonResponse.put("tables", tables);
-			logger.log(jsonResponse.toString());
-			response.setStatusCode(200);
-			response.setBody(objectMapper.writeValueAsString(jsonResponse));
+			responseEvent = routeRequest(requestEvent);
+		} catch (JsonParseException e) {
+			responseEvent = badRequest(String.format("Unable to parse the request body: %s", e.getMessage()));
 		} catch (Exception e) {
-			response.setStatusCode(400);
+			responseEvent = genericResponse(500, String.format("Error: %s", e.getMessage()));
 		}
-		return response;
+		context.getLogger().log("Response Event: " + gson.toJson(responseEvent));
+		return responseEvent;
 	}
 
-
-	private APIGatewayProxyResponseEvent getTableById(String tableId) {
-		logger.log("getTableById was called");
-		APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
-		ObjectMapper objectMapper = new ObjectMapper();
-		try {
-			AmazonDynamoDB ddb = AmazonDynamoDBClientBuilder.standard()
-					.withRegion(System.getenv("region"))
-					.build();
-
-			ScanRequest scanRequest = new ScanRequest().withTableName(System.getenv("tablesTable"));
-			ScanResult scanResult = ddb.scan(scanRequest);
-			logger.log(String.valueOf(scanResult));
-			Map<String, AttributeValue> table = new HashMap<>();
-			for (Map<String, AttributeValue> item : scanResult.getItems()) {
-				int existingId = Integer.parseInt(item.get("id").getS().trim().replaceAll("\"", ""));
-				int requiredId = Integer.parseInt(tableId.trim().replaceAll("\"", ""));
-				if (existingId == requiredId) {
-					table = item;
+	private APIGatewayProxyResponseEvent routeRequest(APIGatewayProxyRequestEvent event) {
+		String[] pathElements = event.getPath().substring(1).split("/");
+		String method = event.getHttpMethod();
+		switch (pathElements[0]) {
+			case "signup":
+				if (pathElements.length > 1) {
+					return mappingNotFound(event.getPath());
 				}
-			}
-			logger.log(table.toString());
-			Map<String, Object> jsonResponse = ItemUtils.toSimpleMapValue(table);
-			jsonResponse.replace("id", Integer.parseInt((String) jsonResponse.get("id")));
-
-			logger.log(jsonResponse.toString());
-			response.setStatusCode(200);
-			response.setBody(objectMapper.writeValueAsString(jsonResponse));
-		} catch (Exception e) {
-			response.setStatusCode(400);
+				return method.equals("POST") ? processSignUp(gson.fromJson(event.getBody(), SignUp.class)) :
+						unsupportedMethod(event.getHttpMethod(), event.getPath());
+			case "signin":
+				if (pathElements.length > 1) {
+					return mappingNotFound(event.getPath());
+				}
+				return method.equals("POST") ? processSignIn(gson.fromJson(event.getBody(), SignIn.class)) :
+						unsupportedMethod(event.getHttpMethod(), event.getPath());
+			case "tables":
+				switch (pathElements.length) {
+					case 1:
+						switch (method) {
+							case "GET":
+								return processGetTables();
+							case "POST":
+								return processPostTable(gson.fromJson(event.getBody(), Table.class));
+							default:
+								return unsupportedMethod(event.getHttpMethod(), event.getPath());
+						}
+					case 2:
+						return method.equals("GET") ? processGetTable(pathElements[1]) :
+								unsupportedMethod(event.getHttpMethod(), event.getPath());
+					default:
+						return mappingNotFound(event.getPath());
+				}
+			case "reservations":
+				if (pathElements.length > 1) {
+					return mappingNotFound(event.getPath());
+				}
+				switch (method) {
+					case "GET":
+						return processGetReservations();
+					case "POST":
+						return processPostReservation(gson.fromJson(event.getBody(), Reservation.class));
+					default:
+						return unsupportedMethod(event.getHttpMethod(), event.getPath());
+				}
+			default:
+				return mappingNotFound(event.getPath());
 		}
-		return response;
 	}
 
-	private APIGatewayProxyResponseEvent postReservation(APIGatewayProxyRequestEvent event){
-		logger.log("postReservation was called");
-		APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
-		ObjectMapper objectMapper = new ObjectMapper();
-		AmazonDynamoDB ddb = AmazonDynamoDBClientBuilder.standard()
-				.withRegion(System.getenv("region"))
+	private APIGatewayProxyResponseEvent genericResponse(int statusCode, String body) {
+		Map<String, String> corsHeaders = new HashMap<>();
+		corsHeaders.put("Access-Control-Allow-Headers",
+				"Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token");
+		corsHeaders.put("Access-Control-Allow-Origin", "*");
+		corsHeaders.put("Access-Control-Allow-Methods", "*");
+		corsHeaders.put("Accept-Version", "*");
+		return new APIGatewayProxyResponseEvent().withStatusCode(statusCode).withBody(body)
+				.withHeaders(corsHeaders);
+	}
+
+	private APIGatewayProxyResponseEvent mappingNotFound(String path) {
+		return genericResponse(404, String.format("No mapping found for %s", path));
+	}
+
+	private APIGatewayProxyResponseEvent unsupportedMethod(String method, String path) {
+		return genericResponse(405, String.format("Unsupported method %s for path %s", method, path));
+	}
+
+	private APIGatewayProxyResponseEvent badRequest(String body) {
+		return genericResponse(400, body);
+	}
+
+	private APIGatewayProxyResponseEvent ok(String body) {
+		return genericResponse(200, body);
+	}
+
+	private APIGatewayProxyResponseEvent processSignUp(SignUp signUp) {
+		if (Validator.invalidEmail(signUp.getEmail()) || Validator.invalidPassword(signUp.getPassword())) {
+			return badRequest("Invalid email or password");
+		}
+		String userPoolId = System.getenv("user_pool_id");
+		AdminCreateUserRequest createUserRequest = AdminCreateUserRequest.builder()
+				.userPoolId(userPoolId)
+				.username(signUp.getEmail())
+				.messageAction(MessageActionType.SUPPRESS)
+				.userAttributes(AttributeType.builder().name("email").value(signUp.getEmail()).build())
 				.build();
-		try{
-			Map<String, Object> body = objectMapper.readValue(event.getBody(), Map.class);
-			logger.log(body.toString());
-
-			String reservationId = UUID.randomUUID().toString();
-			String tableNumber = String.valueOf(body.get("tableNumber"));
-			String clientName = String.valueOf(body.get("clientName"));
-			String phoneNumber = String.valueOf(body.get("phoneNumber"));
-			String date = String.valueOf(body.get("date"));
-			String slotTimeStart = String.valueOf(body.get("slotTimeStart"));
-			String slotTimeEnd = String.valueOf(body.get("slotTimeEnd"));
-
-
-			Item item = new Item()
-					.withString("id", reservationId)
-					.withString("tableNumber", tableNumber)
-					.withString("clientName", clientName)
-					.withString("phoneNumber", phoneNumber)
-					.withString("date", date)
-					.withString("slotTimeStart", slotTimeStart)
-					.withString("slotTimeEnd", slotTimeEnd);
-
-
-
-			logger.log(String.valueOf(item));
-
-			if (!tableExists(ddb,System.getenv("tablesTable"), tableNumber)) {
-				response.setStatusCode(400);
-				response.setBody("Table does not exist");
-				logger.log("Table does not exist");
-				return response;
-			}
-
-			if (isOverlappingReservation(ddb,System.getenv("reservationsTable"), tableNumber, date, slotTimeStart, slotTimeEnd)) {
-				response.setStatusCode(400);
-				response.setBody("Reservation overlaps with an existing reservation");
-				logger.log("Reservation overlaps with an existing reservation");
-				return response;
-			}
-
-
-			ddb.putItem(System.getenv("reservationsTable"), ItemUtils.toAttributeValues(item));
-
-			Map<String, Object> jsonResponse = new HashMap<>();
-			jsonResponse.put("reservationId", reservationId);
-			logger.log(jsonResponse.toString());
-			response.setStatusCode(200);
-			response.setBody(objectMapper.writeValueAsString(jsonResponse));
-		} catch (Exception ex){
-			response.setStatusCode(400);
-		}
-		return response;
+		cognito.adminCreateUser(createUserRequest);
+		AdminSetUserPasswordRequest setUserPasswordRequest = AdminSetUserPasswordRequest.builder()
+				.password(signUp.getPassword())
+				.userPoolId(userPoolId)
+				.username(signUp.getEmail())
+				.permanent(true)
+				.build();
+		cognito.adminSetUserPassword(setUserPasswordRequest);
+		return ok(null);
 	}
 
-	private APIGatewayProxyResponseEvent getReservations() {
-		logger.log("getReservations was called");
-		APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
-		ObjectMapper objectMapper = new ObjectMapper();
+	private APIGatewayProxyResponseEvent processSignIn(SignIn signIn) {
+		// A temporary crutch to circumvent a bug in verification
+		if (Validator.invalidEmail(signIn.getEmail()) || Validator.invalidPassword(signIn.getPassword())) {
+			return badRequest("Invalid email or password");
+		}
+		String userPoolId = System.getenv("user_pool_id");
+		String clientId = System.getenv("client_id");
+		// Recommended auth flows are very odd
+		AdminInitiateAuthRequest request = AdminInitiateAuthRequest.builder()
+				.authFlow(AuthFlowType.ADMIN_NO_SRP_AUTH)
+				.userPoolId(userPoolId)
+				.clientId(clientId)
+				.authParameters(Map.of("USERNAME", signIn.getEmail(), "PASSWORD", signIn.getPassword()))
+				.build();
 		try {
-			AmazonDynamoDB ddb = AmazonDynamoDBClientBuilder.standard()
-					.withRegion(System.getenv("region"))
-					.build();
-
-			ScanRequest scanRequest = new ScanRequest().withTableName(System.getenv("reservationsTable"));
-			ScanResult scanResult = ddb.scan(scanRequest);
-			logger.log(String.valueOf(scanResult));
-
-			List<Map<String, Object>> reservations = new ArrayList<>();
-			for (Map<String, AttributeValue> item : scanResult.getItems()) {
-				item.remove("id");
-				Map<String, Object> reservation = new LinkedHashMap<>();
-				reservation.put("tableNumber", Integer.parseInt(item.get("tableNumber").getS()));
-				reservation.put("clientName", item.get("clientName").getS());
-				reservation.put("phoneNumber", item.get("phoneNumber").getS());
-				reservation.put("date", item.get("date").getS());
-				reservation.put("slotTimeStart", item.get("slotTimeStart").getS());
-				reservation.put("slotTimeEnd", item.get("slotTimeEnd").getS());
-
-				reservations.add(reservation);
-			}
-
-			logger.log(reservations.toString());
-
-			Map<String, Object> jsonResponse = new HashMap<>();
-			jsonResponse.put("reservations", reservations);
-			logger.log(jsonResponse.toString());
-
-			response.setStatusCode(200);
-			response.setBody(objectMapper.writeValueAsString(jsonResponse));
-
-		} catch (Exception ex) {
-			response.setStatusCode(400);
+			AdminInitiateAuthResponse response = cognito.adminInitiateAuth(request);
+			// Need to provide an id token instead of advertised access token smh
+			return ok(gson.toJson(Map.of("accessToken", response.authenticationResult().idToken())));
+		} catch (UserNotFoundException e) {
+			// This should probably be expanded and treated as a 401
+			return badRequest(String.format("User %s not found", signIn.getEmail()));
 		}
-		return response;
 	}
 
-	public boolean tableExists(AmazonDynamoDB ddb, String tableName, String tableNumber) {
-		ScanResult scanResult = ddb.scan(new ScanRequest().withTableName(tableName));
-
-		for (Map<String, AttributeValue> item : scanResult.getItems()) {
-			if (tableNumber.equals(item.get("number").getN())) {
-				logger.log("Table exists, number: " + tableNumber);
-				return true;
-			}
-		}
-		return false;
+	private APIGatewayProxyResponseEvent processGetTables() {
+		List<Table> tables = tablesTable.scan().items().stream().collect(Collectors.toList());
+		return ok(gson.toJson(Map.of("tables", tables)));
 	}
 
-	public boolean isOverlappingReservation(AmazonDynamoDB ddb,String tableName, String tableNumber, String date, String slotTimeStart, String slotTimeEnd) {
-		ScanResult scanResult = ddb.scan(new ScanRequest().withTableName(tableName));
-		for (Map<String, AttributeValue> item : scanResult.getItems()) {
-			String existingTableNumber = item.get("tableNumber").getS();
-			String existingDate = item.get("date").getS();
-
-			if (tableNumber.equals(existingTableNumber) && date.equals(existingDate)) {
-				String existingSlotTimeStart = item.get("slotTimeStart").getS();
-				String existingSlotTimeEnd = item.get("slotTimeEnd").getS();
-
-				return isTimeOverlap(slotTimeStart, slotTimeEnd, existingSlotTimeStart, existingSlotTimeEnd);
-			}
-		}
-
-		return false;
+	private APIGatewayProxyResponseEvent processPostTable(Table table) {
+		tablesTable.putItem(table);
+		return ok(gson.toJson(Map.of("id", table.getId())));
 	}
 
-	private boolean isTimeOverlap(String slotTimeStart, String slotTimeEnd, String existingSlotTimeStart, String existingSlotTimeEnd) {
+	private APIGatewayProxyResponseEvent processGetTable(String tableId) {
+		try {
+			Key tableKey = Key.builder().partitionValue(Integer.valueOf(tableId)).build();
+			Table table = tablesTable.getItem(tableKey);
+			if (table == null) {
+				return genericResponse(404, String.format("Table with id %s not found", tableId));
+			}
+			return ok(gson.toJson(table));
+		} catch (NumberFormatException e) {
+			return badRequest("Invalid table id");
+		}
+	}
 
-		LocalTime start = LocalTime.parse(slotTimeStart);
-		LocalTime end = LocalTime.parse(slotTimeEnd);
-		LocalTime existingStart = LocalTime.parse(existingSlotTimeStart);
-		LocalTime existingEnd = LocalTime.parse(existingSlotTimeEnd);
+	private APIGatewayProxyResponseEvent processGetReservations() {
+		List<Reservation> reservations = reservationsTable.scan().items().stream().collect(Collectors.toList());
+		return ok(gson.toJson(Map.of("reservations", reservations)));
+	}
 
-		return (start.isBefore(existingEnd) && end.isAfter(existingStart));
+	private APIGatewayProxyResponseEvent processPostReservation(Reservation reservation) {
+		if (Validator.invalidDate(reservation.getDate())) {
+			return badRequest("Invalid date");
+		}
+		if (Validator.invalidTime(reservation.getSlotTimeStart()) ||
+				Validator.invalidTime(reservation.getSlotTimeEnd()) ||
+				reservation.getSlotTimeStart().compareTo(reservation.getSlotTimeEnd()) >= 0) {
+			return badRequest("Invalid (slotStartTime, slotEndTime)");
+		}
+		// The following 2 checks should really be migrated to a DB-level query, but I can't be asked
+		boolean nonExistingTable = tablesTable.scan().items().stream()
+				.noneMatch(existingTable -> existingTable.getNumber() == reservation.getTableNumber());
+		if (nonExistingTable) {
+			return badRequest(String.format("Table with number %d not found", reservation.getTableNumber()));
+		}
+		boolean hasOverlapsWithExistingReservations = reservationsTable.scan().items().stream()
+				.filter(existingReservation -> existingReservation.getTableNumber() == reservation.getTableNumber())
+				.anyMatch(existingReservation -> Validator.overlappingRanges(
+						existingReservation.getSlotTimeStart(), existingReservation.getSlotTimeEnd(),
+						reservation.getSlotTimeStart(), reservation.getSlotTimeEnd(),
+						// Comparing string values should suffice
+						Comparator.comparing(Function.identity())));
+		if (hasOverlapsWithExistingReservations) {
+			return badRequest("Overlaps with existing reservation");
+		}
+		reservation.setId(UUID.randomUUID().toString());
+		reservationsTable.putItem(reservation);
+		return ok(gson.toJson(Map.of("reservationId", reservation.getId())));
+	}
+
+	@Value
+	public static class SignUp {
+		String firstName;
+		String lastName;
+		String email;
+		String password;
+	}
+
+	@Value
+	public static class SignIn {
+		String firstName;
+		String lastName;
+		String email;
+		String password;
+	}
+
+	@Data
+	@DynamoDbBean
+	public static class Table {
+		private int id;
+		private int number;
+		private int places;
+		private boolean isVip;
+		private int minOrder;
+
+		@DynamoDbPartitionKey
+		public int getId() {
+			return id;
+		}
+	}
+
+	@Data
+	@DynamoDbBean
+	public static class Reservation {
+		transient private String id;
+		private int tableNumber;
+		private String clientName;
+		private String phoneNumber;
+		private String date;
+		private String slotTimeStart;
+		private String slotTimeEnd;
+
+		@DynamoDbPartitionKey
+		public String getId() {
+			return id;
+		}
 	}
 }
