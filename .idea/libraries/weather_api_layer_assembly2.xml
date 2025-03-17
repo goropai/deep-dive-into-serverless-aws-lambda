@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="weather-api-layer-assembly2">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/task10/weather-api-layer-assembly.zip!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
