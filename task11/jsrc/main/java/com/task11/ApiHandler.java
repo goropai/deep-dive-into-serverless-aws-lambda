@@ -53,9 +53,8 @@ import static com.syndicate.deployment.model.environment.ValueTransformer.USER_P
 		@EnvironmentVariable(key = "tables_table", value = "${tables_table}"),
 		@EnvironmentVariable(key = "reservations_table", value = "${reservations_table}"),
 		@EnvironmentVariable(key = "booking_userpool", value = "${booking_userpool}"),
-		@EnvironmentVariable(key = "REGION", value = "${region}"),
-		@EnvironmentVariable(key = "COGNITO_ID", value = "${pool_name}", valueTransformer = USER_POOL_NAME_TO_USER_POOL_ID),
-		@EnvironmentVariable(key = "CLIENT_ID", value = "${pool_name}", valueTransformer = USER_POOL_NAME_TO_CLIENT_ID)
+		@EnvironmentVariable(key = "COGNITO_ID", value = "${booking_userpool}", valueTransformer = USER_POOL_NAME_TO_USER_POOL_ID),
+		@EnvironmentVariable(key = "CLIENT_ID", value = "${booking_userpool}", valueTransformer = USER_POOL_NAME_TO_CLIENT_ID)
 })
 public class ApiHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 	private final CognitoIdentityProviderClient cognitoClient = CognitoIdentityProviderClient.create();
