@@ -8,6 +8,7 @@
         <outputRelativeToContentRoot value="true" />
         <module name="task09" />
         <module name="task08" />
+        <module name="task11 (1)" />
         <module name="task05" />
         <module name="task06" />
         <module name="task03" />
@@ -21,6 +22,8 @@
       <module name="task09a" target="11" />
       <module name="task10" target="11" />
       <module name="task10a" target="11" />
+      <module name="task11 (1)" target="11" />
+      <module name="task12" target="11" />
     </bytecodeTargetLevel>
   </component>
 </project>
