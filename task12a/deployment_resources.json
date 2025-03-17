@@ -12,21 +12,21 @@
             "dynamodb:PutItem",
             "dynamodb:Batch*",
             "dynamodb:DeleteItem",
+            "ssm:PutParameter",
+            "ssm:GetParameter",
+            "kms:Decrypt",
             "dynamodb:Scan",
             "cognito-idp:DescribeUserPool",
             "cognito-idp:GetUser",
             "cognito-idp:ListUsers",
             "cognito-idp:AdminCreateUser",
-            "cognito-idp:AdminSetUserPassword",
             "cognito-idp:AdminInitiateAuth",
+            "cognito-idp:AdminSetUserPassword",
             "cognito-idp:GetIdentityProviderByIdentifier",
             "cognito-idp:ListUserPools",
             "cognito-idp:ListUserPoolClients",
             "cognito-idp:AdminRespondToAuthChallenge",
-            "cognito-idp:AdminConfirmSignUp",
-            "ssm:PutParameter",
-            "ssm:GetParameter",
-            "kms:Decrypt"
+            "cognito-idp:AdminConfirmSignUp"
           ],
           "Effect": "Allow",
           "Resource": "*"
@@ -71,7 +71,7 @@
   "${tables_table}": {
     "resource_type": "dynamodb_table",
     "hash_key_name": "id",
-    "hash_key_type": "N",
+    "hash_key_type": "S",
     "read_capacity": 1,
     "write_capacity": 1,
     "global_indexes": [],
@@ -88,13 +88,13 @@
   },
   "api-ui-hoster": {
     "resource_type": "s3_bucket",
-    "acl": "public-read",
+    "acl": "private",
     "cors": [],
     "policy": {
       "Version": "2012-10-17",
       "Statement": [
         {
-          "Sid": "PublicReadGetObject",
+          "Sid": "WebSiteHostingGetObject",
           "Effect": "Allow",
           "Principal": "*",
           "Action": [
@@ -102,15 +102,22 @@
           ],
           "Resource": [
             "arn:aws:s3:::api-ui-hoster/*"
-          ]
+          ],
+          "Condition": {
+            "IpAddress": {
+              "aws:SourceIp": [
+                "18.197.177.98/32"
+              ]
+            }
+          }
         }
       ]
     },
     "public_access_block": {
-      "block_public_acls": false,
-      "ignore_public_acls": false,
-      "block_public_policy": false,
-      "restrict_public_buckets": false
+      "block_public_acls": true,
+      "ignore_public_acls": true,
+      "block_public_policy": true,
+      "restrict_public_buckets": true
     },
     "tags": {},
     "website_hosting": {
