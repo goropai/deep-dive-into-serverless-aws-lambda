@@ -11,7 +11,7 @@ import com.syndicate.deployment.annotations.environment.EnvironmentVariables;
 import com.syndicate.deployment.annotations.lambda.LambdaHandler;
 import com.syndicate.deployment.annotations.resources.DependsOn;
 import com.syndicate.deployment.model.ResourceType;
-import com.task11.utils.Validator;
+import com.task12a.utils.Validator;
 import lombok.Data;
 import lombok.Value;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
